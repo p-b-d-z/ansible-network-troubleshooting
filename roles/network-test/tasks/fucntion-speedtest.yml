@@ -1,0 +1,33 @@
+---
+- name: Run Speedtest
+  ansible.builtin.shell: |
+    /etc/cron.hourly/0speedtest
+  register: _speedtest
+
+- name: Debug speedtest
+  ansible.builtin.debug:
+    var: _speedtest
+  tags:
+    - debug
+
+- name: Notify Slack
+  community.general.slack:
+    token: "{{ slack_token }}"
+    channel: "#alerts-network"
+    icon_emoji: ":ansible:"
+    username: "Ansible"
+    blocks:
+      - type: context
+        elements:
+          - type: mrkdwn
+            text: "Speedtest results from {{ inventory_hostname }}\n"
+          - type: mrkdwn
+            text: "```{% for item in _speedtest.stdout_lines %}{% if item|length > 1 %}{{ item + '\n'}}{% endif %}{% endfor %}```"
+  delegate_to: localhost
+
+### Functions should exit after running
+- name: Function completion
+  ansible.builtin.meta: end_host
+  when: jenkins_targeted_func != 'all-tests'
+...
+

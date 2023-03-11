@@ -1,0 +1,54 @@
+---
+- name: Get ID of current image
+  ansible.builtin.command: 'docker images --format {%raw%}"{{.ID}}"{%endraw%} --no-trunc {{ iperf_image }}:{{ iperf_image_tag }}'
+  register: imageid
+  changed_when: imageid.rc != 0
+
+- name: Debug imageid
+  ansible.builtin.debug:
+    var: imageid
+  tags:
+    - debug
+
+- name: Pull latest image
+  community.general.docker_image:
+    name: "{{ iperf_image}}"
+    state: present
+    tag: "{{ iperf_image_tag }}"
+    source: pull
+    force_source: yes
+  register: image_pull
+  changed_when: imageid.stdout != image_pull.image.Id
+  ignore_errors: true
+
+- name: Debug image_pull
+  ansible.builtin.debug:
+    var: image_pull
+  tags:
+    - debug
+
+- name: Configure container
+  community.general.docker_container:
+    name: iperf
+    image: "{{ iperf_image }}:{{ iperf_image_tag }}"
+    network_mode: host
+# Published ports discarded in host mode
+#    ports:
+#      - "5201-5210:5201-5210"
+    restart_policy: always
+    state: started
+    log_driver: "{{ iperf_log_driver }}"
+    log_options:
+      max-size: "{{ iperf_log_maxsize }}"
+      max-file: "{{ iperf_log_maxfile }}"
+    keep_volumes: yes
+    recreate: '{{ True if image_pull.changed else omit }}'
+  register: _container
+
+- name: Debug container
+  ansible.builtin.debug:
+    var: _container
+  tags:
+    - debug
+...
+

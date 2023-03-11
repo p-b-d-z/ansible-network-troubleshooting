@@ -1,0 +1,12 @@
+FROM python:3.10-alpine
+
+# Install the necessary packages
+RUN apk add --update-cache \
+    py-pip \
+  && pip3 install --upgrade pip \
+  && pip3 install speedtest-cli \
+  && pip3 install fastcli \
+  && rm -rf /var/cache/apk/*
+
+ENTRYPOINT ["speedtest-cli", "--simple", "--secure"]
+

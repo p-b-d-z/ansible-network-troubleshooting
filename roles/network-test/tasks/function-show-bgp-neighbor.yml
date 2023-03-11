@@ -1,0 +1,36 @@
+---
+- name: Use exabgpcli to show BGP neighbors
+  ansible.builtin.shell: |
+    /usr/bin/docker exec exabgp /usr/bin/exabgpcli show neighbor summary
+  register: _bgp_show_neighbor
+
+- name: Debug Test
+  ansible.builtin.debug:
+    var: _bgp_show_neighbor
+  tags:
+    - debug
+
+- name: Manipulate data - Trim whitespace
+  ansible.builtin.set_fact:
+    bgp_neighbor_output: "{{ _bgp_show_neighbor.stdout_lines | map('trim') | list }}"
+
+- name: Notify Slack
+  community.general.slack:
+    token: "{{ slack_token }}"
+    channel: "#alerts-network"
+    icon_emoji: ":ansible:"
+    username: "Ansible"
+    blocks:
+      - type: context
+        elements:
+          - type: mrkdwn
+            text: "BGP Neighbors on {{ inventory_hostname }}"
+          - type: mrkdwn
+            text: "```{% for item in bgp_neighbor_output %}{{ item + '\n'}}{% endfor %}```"
+  delegate_to: localhost
+
+### Functions should exit after running
+- name: Function completion
+  ansible.builtin.meta: end_host
+  when: jenkins_targeted_func != 'all-tests'
+...

@@ -1,0 +1,9 @@
+---
+# Docker vars
+iperf_log_driver: "json-file"
+iperf_log_maxsize: '1g'
+iperf_log_maxfile: '7'
+iperf_image: privaterepo/iperf3
+iperf_image_tag: latest
+...
+

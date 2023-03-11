@@ -1,0 +1,82 @@
+---
+- name: Run Traceroute to Cloudflare
+  ansible.builtin.shell: |
+    echo Testing: Cloudflare DNS
+    mtr 1.1.1.1 -r -c 10
+  register: _lan_test_1
+
+- name: Debug Test
+  ansible.builtin.debug:
+    var: _lan_test_1
+  tags:
+    - debug
+
+- name: Run Traceroute to Google
+  ansible.builtin.shell: |
+    echo Testing: Google DNS
+    mtr 8.8.8.8 -r -c 10
+  register: _lan_test_2
+
+- name: Debug Test
+  ansible.builtin.debug:
+    var: _lan_test_2
+  tags:
+    - debug
+
+- name: Run Traceroute to Quad 9s
+  ansible.builtin.shell: |
+    echo Testing: Quad 9s
+    mtr 9.9.9.9 -r -c 10
+  register: _lan_test_3
+
+- name: Debug Test
+  ansible.builtin.debug:
+    var: _lan_test_3
+  tags:
+    - debug
+
+- name: Run Traceroute to Level3
+  ansible.builtin.shell: |
+    echo Testing: Level3
+    mtr 4.2.2.2 -r -c 10
+  register: _lan_test_4
+
+- name: Debug Test
+  ansible.builtin.debug:
+    var: _lan_test_4
+  tags:
+    - debug
+
+- name: Manipulate data - Trim whitespace
+  ansible.builtin.set_fact:
+    test_1_output: "{{ _lan_test_1.stdout_lines | map('trim') | list }}"
+    test_2_output: "{{ _lan_test_2.stdout_lines | map('trim') | list }}"
+    test_3_output: "{{ _lan_test_3.stdout_lines | map('trim') | list }}"
+    test_4_output: "{{ _lan_test_4.stdout_lines | map('trim') | list }}"
+
+- name: Notify Slack
+  community.general.slack:
+    token: "{{ slack_token }}"
+    channel: "#alerts-network"
+    icon_emoji: ":ansible:"
+    username: "Ansible"
+    blocks:
+      - type: context
+        elements:
+          - type: mrkdwn
+            text: "WAN traceroute on {{ inventory_hostname }}"
+          - type: mrkdwn
+            text: "```{% for item in test_1_output %}{% if item|length > 10 %}{{ item + '\n'}}{% endif %}{% endfor %}```"
+          - type: mrkdwn
+            text: "```{% for item in test_2_output %}{% if item|length > 10 %}{{ item + '\n'}}{% endif %}{% endfor %}```"
+          - type: mrkdwn
+            text: "```{% for item in test_3_output %}{% if item|length > 10 %}{{ item + '\n'}}{% endif %}{% endfor %}```"
+          - type: mrkdwn
+            text: "```{% for item in test_4_output %}{% if item|length > 10 %}{{ item + '\n'}}{% endif %}{% endfor %}```"
+  delegate_to: localhost
+
+### Functions should exit after running
+- name: Function completion
+  ansible.builtin.meta: end_host
+  when: jenkins_targeted_func != 'all-tests'
+...

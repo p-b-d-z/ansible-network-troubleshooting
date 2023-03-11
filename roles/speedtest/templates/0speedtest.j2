@@ -1,0 +1,55 @@
+#!/bin/bash
+{{ ansible_managed | comment }}
+# Function for converting IP addresses to decimal
+ip2dec () {
+  local a b c d ip=$@
+  IFS=. read -r a b c d <<< "$ip"
+  printf '%d\n' "$((a * 256 ** 3 + b * 256 ** 2 + c * 256 + d))"
+}
+# Trap function for cleanup
+function finish {
+  # Cleanup temporary files
+  rm -f /tmp/last.speedtest
+}
+
+DDIP="{{ speedtest_ddip }}"
+ISP="{{ speedtest_isp }}"
+SITE="{{ speedtest_site }}"
+MYIP=$(dig +short myip.opendns.com @resolver1.opendns.com)
+MYIP_DEC=$(ip2dec "$MYIP")
+
+# Sleep to avoid running at the same time as another test
+sleep $[ ( $RANDOM % 30 )  + 1 ]s
+
+# Run the container
+docker run --rm --pull always --name speedtest --network host --dns 1.1.1.1 --dns 9.9.9.9 privaterepo/speedtest-cli:master > /tmp/last.speedtest
+
+# Parse the variable into more variables
+UPLOAD=$(cat /tmp/last.speedtest | grep Upload | grep -m 1 -o -E "[0-9]+\.[0-9]+")
+DOWNLOAD=$(cat /tmp/last.speedtest | grep Download | grep -m 1 -o -E "[0-9]+\.[0-9]+")
+LATENCY=$(cat /tmp/last.speedtest | grep Ping | grep -m 1 -o -E "[0-9]+\.[0-9]+")
+
+# Clean up decimal places
+UPLOAD=${UPLOAD%.*}
+DOWNLOAD=${DOWNLOAD%.*}
+LATENCY=${LATENCY%.*}
+
+# Create statsd formatted output
+DDUPLOAD="speedtest_upload:$UPLOAD|g|#isp:$ISP,speedtest,upload,site:$SITE,test_site:speedtest"
+DDDOWNLOAD="speedtest_download:$DOWNLOAD|g|#isp:$ISP,speedtest,download,site:$SITE,test_site:speedtest"
+DDLATENCY="speedtest_latency:$LATENCY|g|#isp:$ISP,speedtest,latency,site:$SITE,test_site:speedtest"
+DDWANIPDECIMAL="speedtest_src_ip_dec:$MYIP_DEC|g|#isp:$ISP,source_ip,site:$SITE,IP:$MYIP"
+
+# Dump the output
+echo "Uploading to Datadog via $DDIP..."
+echo "$DDUPLOAD" > /dev/udp/localhost/8125
+echo "$DDDOWNLOAD" > /dev/udp/localhost/8125
+echo "$DDLATENCY" > /dev/udp/localhost/8125
+echo "$DDWANIPDECIMAL" > /dev/udp/localhost/8125
+
+# Validate math
+echo "Results: $DOWNLOAD Mbps | $UPLOAD Mbps | $LATENCY ms"
+echo "My IP: $MYIP"
+
+trap finish EXIT
+

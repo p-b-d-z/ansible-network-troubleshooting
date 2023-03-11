@@ -1,0 +1,9 @@
+---
+- name: Deploy Speedtest script
+  ansible.builtin.template:
+    src: 0speedtest.j2
+    dest: /etc/cron.hourly/0speedtest
+    owner: root
+    group: root
+    mode: '0755'
+...

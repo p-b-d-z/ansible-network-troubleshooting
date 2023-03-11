@@ -1,0 +1,23 @@
+---
+# Retrieve Secrets
+- include_tasks: secrets.yml
+
+# Functions
+# These tasks should go above all other task files as they are programmed to
+# exit upon completion and are designed to be run independently.
+- include_tasks: function-dns-benchmark.yml
+  when: jenkins_targeted_func == 'dns-benchmark' or jenkins_targeted_func == 'all-tests'
+- include_tasks: function-speedtest.yml
+  when: jenkins_targeted_func == 'speedtest' or jenkins_targeted_func == 'all-tests'
+- include_tasks: function-lan-traceroute.yml
+  when: jenkins_targeted_func == 'lan-traceroute' or jenkins_targeted_func == 'all-tests'
+- include_tasks: function-wan-traceroute.yml
+  when: jenkins_targeted_func == 'wan-traceroute' or jenkins_targeted_func == 'all-tests'
+- include_tasks: function-show-bgp-neighbor.yml
+  when: jenkins_targeted_func == 'show-bgp-neighbor' or jenkins_targeted_func == 'all-tests'
+# Functions should exit after running unless it's all-tests, we do it last.
+- name: Function completion
+  ansible.builtin.meta: end_host
+  when: jenkins_targeted_func == 'all-tests'
+...
+

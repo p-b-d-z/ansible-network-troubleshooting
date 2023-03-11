@@ -1,0 +1,10 @@
+---
+# Speedtest defaults
+## Host, used for location tagging in logs
+speedtest_ddip: "localhost"
+## ISP, used for location tagging in logs
+speedtest_isp: "changeme"
+## Site, used for location tagging in logs
+speedtest_site: "changeme"
+...
+

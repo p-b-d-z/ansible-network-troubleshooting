@@ -1,0 +1,56 @@
+from datadog import initialize, statsd
+import time
+import iperf3
+import json
+import os
+
+
+# # Define Environment Variables
+# Site to run the test against from YDC
+remote_site = os.getenv('REMOTE_SITE_HOSTNAME')
+# How long to run the test for
+test_duration = os.getenv('TEST_DURATION')
+# Jenkins Job Base Name
+job_base_name = os.getenv('JOB_BASE_NAME')
+site_tag = job_base_name[7:]
+
+# Extract abbreviated site ID from hostname
+siteabbrv = remote_site.split('.')[1]
+
+# Initialize Datadog
+options = {
+    'statsd_host': '127.0.0.1',
+    'statsd_port': 8125,
+}
+
+# Initialize Stats
+initialize(**options)
+
+# Iperf Client Settings
+client = iperf3.Client()
+client.server_hostname = remote_site
+client.zerocopy = True
+client.verbose = False
+client.reverse = True
+client.duration = int(test_duration)
+
+# Run test and load into dictionary
+data = json.loads(str(client.run()))
+
+# Extract output into integers and convert to Megabits per second
+sent_mbps_avg = int(data['end']['sum_sent']['bits_per_second']) / 1000000
+received_mbps_avg = int(data['end']['sum_received']['bits_per_second']) / 1000000
+
+# Debugging output
+print('Sent Average ' + str(sent_mbps_avg) + ' Mbps')
+print('Received Average ' + str(received_mbps_avg) + ' Mbps')
+
+# Feed Metrics into DogStatsd
+print('iperf.ingress.avg.mbps')
+statsd.gauge('iperf.ingress.avg.mbps', sent_mbps_avg, tags=['site:{}'.format(site_tag)])
+time.sleep(1)
+
+print('iperf.egress.avg.mbps')
+statsd.gauge('iperf.egress.avg.mbps', received_mbps_avg, tags=['site:{}'.format(site_tag)])
+time.sleep(1)
+

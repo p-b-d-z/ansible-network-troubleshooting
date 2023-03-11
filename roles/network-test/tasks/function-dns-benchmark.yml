@@ -1,0 +1,58 @@
+---
+- name: Run DNS Benchmark
+  ansible.builtin.shell: |
+    docker run -t --rm farrokhi/dnsdiag ./dnseval.py -t A -f public-servers.txt -c10 pxg.com
+  register: _benchmark
+
+- name: Debug benchmark
+  ansible.builtin.debug:
+    var: _benchmark
+  tags:
+    - debug
+
+- name: Manipulate data - Remove No Response(s)
+  ansible.builtin.set_fact:
+    benchmark_output: "{{ _benchmark.stdout_lines | map('regex_replace','^(.*)No Response(.*)$','') | list }}"
+
+- name: Manipulate data - Remove extra whitespace
+  ansible.builtin.set_fact:
+    benchmark_output: "{{ benchmark_output | map('regex_replace','     ',' ') | list }}"
+
+- name: Manipulate data - Remove extra whitespace
+  ansible.builtin.set_fact:
+    benchmark_output: "{{ benchmark_output | map('regex_replace','  ',' ') | list }}"
+
+- name: Manipulate data - Remove extra whitespace
+  ansible.builtin.set_fact:
+    benchmark_output: "{{ benchmark_output | map('regex_replace','--','-') | list }}"
+
+- name: Manipulate data - Trim whitespace
+  ansible.builtin.set_fact:
+    benchmark_output: "{{ benchmark_output | map('trim') | list }}"
+
+- name: Debug data
+  ansible.builtin.debug:
+    var: benchmark_output
+  tags:
+    - debug
+
+- name: Notify Slack
+  community.general.slack:
+    token: "{{ slack_token }}"
+    channel: "#alerts-network"
+    icon_emoji: ":ansible:"
+    username: "Ansible"
+    blocks:
+      - type: context
+        elements:
+          - type: mrkdwn
+            text: "DNS Benchmark on {{ inventory_hostname }}"
+          - type: mrkdwn
+            text: "```{% for item in benchmark_output %}{% if item|length > 10 %}{{ item + '\n'}}{% endif %}{% endfor %}```"
+  delegate_to: localhost
+
+### Functions should exit after running
+- name: Function completion
+  ansible.builtin.meta: end_host
+  when: jenkins_targeted_func != 'all-tests'
+...

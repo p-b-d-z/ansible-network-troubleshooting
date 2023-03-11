@@ -1,0 +1,23 @@
+---
+all:
+  children:
+    location1:
+      children:
+        building1:
+          children:
+            production:
+              children:
+                network-a:
+                  hosts:
+                    host1-1-1-a.local.dns:
+                    host1-1-1-b.local.dns:
+        building2:
+          children:
+            production:
+              children:
+                network-1:
+                  hosts:
+                    host1-2-1-a.local.dns:
+                    host1-2-1-b.local.dns:
+...
+
