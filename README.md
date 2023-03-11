@@ -2,7 +2,7 @@
 
 ## Background
 This repository should be considered a template only. My typical setup is orchestrated with Jenkins with a number of
-environmental variables being passed to an ephemeral Ansible container.
+environmental variables being passed to an ephemeral Ansible container. I also use AWS SSM for secret management.
 
 ## Roles
 
