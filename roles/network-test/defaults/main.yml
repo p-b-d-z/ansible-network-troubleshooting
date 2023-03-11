@@ -1,4 +1,12 @@
 ---
+# Typically passed by in Jenkins
+jenkins_targeted_func: "all-tests"
+
+# Slack token placeholder
 slack_token: "get-me-from-ssm"
+
+# Default AWS region for SSM lookups
+# AWS credentials are passed to the Ansible environment by Jenkins
+aws_ssm_region: "us-west-2"
 ...
 
