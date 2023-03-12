@@ -6,7 +6,7 @@ import os
 
 
 # # Define Environment Variables
-# Site to run the test against from YDC
+# Site to run the test against from
 remote_site = os.getenv('REMOTE_SITE_HOSTNAME')
 # How long to run the test for
 test_duration = os.getenv('TEST_DURATION')
